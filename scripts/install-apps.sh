@@ -7,6 +7,7 @@ set -euo pipefail
 #   ./install-apps.sh toolchain    # Homebrew + Node + Codex + Claude Code
 #   ./install-apps.sh openclaw     # OpenClaw only     (requires toolchain)
 #   ./install-apps.sh paperclip    # Paperclip only    (requires toolchain)
+#   ./install-apps.sh hermes       # Hermes Agent only (requires toolchain)
 #   ./install-apps.sh --help
 
 OPENCLAW_INSTALL_URL="${OPENCLAW_INSTALL_URL:-https://openclaw.ai/install.sh}"
@@ -36,10 +37,11 @@ usage() {
 Usage: $(basename "$0") [TARGET]
 
 TARGET:
-  all          Install everything: toolchain, OpenClaw, Paperclip (default)
+  all          Install everything: toolchain, OpenClaw, Paperclip, Hermes (default)
   toolchain    Homebrew + Node + Codex CLI + Claude Code CLI
   openclaw     OpenClaw only (requires toolchain already installed)
   paperclip    Paperclip only (requires toolchain already installed)
+  hermes       Hermes Agent only (requires toolchain already installed)
   (none)       Interactive menu
 
 Environment variable overrides:
@@ -53,6 +55,7 @@ Environment variable overrides:
   OPENCLAW_INSTALL_URL      Override OpenClaw install URL
   HOMEBREW_INSTALL_URL      Override Homebrew install URL
   PAPERCLIP_REPO_URL        Override Paperclip git URL
+  HERMES_INSTALL_URL        Override Hermes installer URL
 EOF
 }
 
@@ -632,6 +635,13 @@ case "${TARGET}" in
     PAPERCLIP_DB_NAME="$(prompt_with_default "Paperclip PostgreSQL database name" "${PAPERCLIP_DB_NAME}")"
     PAPERCLIP_DB_USER="$(prompt_with_default "Paperclip PostgreSQL role name" "${PAPERCLIP_DB_USER}")"
     install_paperclip
+    log "Done"
+    print_shell_hint
+    ;;
+
+  hermes)
+    require_toolchain
+    install_hermes
     log "Done"
     print_shell_hint
     ;;
