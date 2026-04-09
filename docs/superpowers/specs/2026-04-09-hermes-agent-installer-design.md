@@ -73,7 +73,7 @@ No ports, no database, no secrets. Hermes has no install-time config surface tha
 
 ### `install_hermes()` behavior
 
-1. **Preflight.** Call `require_toolchain` (already defined) to guarantee brew/node/npm are present. Hermes's upstream installer needs `git`, `curl`, `python3`, and `python3-venv`. Install them with `apt-get install -y` — most are already present from the toolchain step, this is belt-and-suspenders.
+1. **Preflight.** Call `require_toolchain` (already defined) to guarantee brew/node/npm are present. Hermes's upstream installer needs `git`, `curl`, `python3`, and `python3-venv`. Install them in a single `sudo apt-get update && sudo apt-get install -y ...` block, matching the `install_paperclip` style. Most are already present from the toolchain step, this is belt-and-suspenders.
 
 2. **Run upstream installer.**
    ```bash
@@ -93,7 +93,7 @@ No ports, no database, no secrets. Hermes has no install-time config surface tha
    ```
    The existing `ensure_shell_path_setup` already adds `$HOME/.local/bin` to user shells, so new login shells inherit it automatically.
 
-4. **Install systemd user unit** at `~/.config/systemd/user/hermes-gateway.service`:
+4. **Install systemd user unit** at `~/.config/systemd/user/hermes-gateway.service`. Values marked `${...}` are shell-substituted at install time, exactly like the existing `openclaw-gateway.service` and `paperclip.service` heredocs:
    ```
    [Unit]
    Description=Hermes Agent Messaging Gateway
@@ -101,8 +101,8 @@ No ports, no database, no secrets. Hermes has no install-time config surface tha
    Wants=network-online.target
 
    [Service]
-   Environment=PATH=<systemd_path()>
-   ExecStart=<hermes_bin> gateway start
+   Environment=PATH=${systemd_path_value}
+   ExecStart=${hermes_bin} gateway start
    Restart=on-failure
    RestartSec=10
 
@@ -124,15 +124,18 @@ No ports, no database, no secrets. Hermes has no install-time config surface tha
 
 - **New case branch `hermes)`** in the argument parser. Calls `require_toolchain`, then `install_hermes`. No prompts (Hermes has no install-time config).
 - **`all` branch:** call `install_hermes` after `install_paperclip`. No new prompts added to the upfront prompt block.
-- **Interactive menu:** add option `5) Hermes only`. Update option `1)` label to mention Hermes. Option `1)` calls `install_hermes` after `install_paperclip`.
+- **Interactive menu:** existing options are `1)` Everything, `2)` Toolchain, `3)` OpenClaw, `4)` Paperclip. Add a new option `5) Hermes only` (requires toolchain). Update option `1)`'s label from `"Everything: toolchain + OpenClaw + Paperclip (default)"` to `"Everything: toolchain + OpenClaw + Paperclip + Hermes (default)"`. Option `1)` invokes `install_hermes` after `install_paperclip`. Default remains `1`.
 - **`usage()`:** add `hermes` to the `TARGET` list. Add `HERMES_INSTALL_URL` to the env var overrides list.
 
 ### `maintenance.sh` — `hermes` target
 
-- New `hermes)` case that:
+- New `hermes)` top-level case that:
   1. Runs `hermes update`.
   2. If `systemctl --user is-active --quiet hermes-gateway.service`, restart it. Otherwise leave it alone.
-- Add `hermes` to the interactive menu and the `all` target.
+- **`all` target:** call `update_hermes` after `update_paperclip`. Do **not** add a prompt for it (Hermes has no version/ref prompt).
+- **Interactive menu:** existing options are `1)` OpenClaw, `2)` Paperclip, `3)` Both (default). Renumber: `1)` OpenClaw, `2)` Paperclip, `3)` Hermes, `4)` All (default). The default moves from `3` to `4`. Update the `read -r -p "Choice [3]: "` prompt to `"Choice [4]: "` and the `CHOICE="${CHOICE:-3}"` fallback to `"${CHOICE:-4}"`.
+- **`show_status`:** add a `hermes` branch that runs `systemctl --user --no-pager --full status hermes-gateway.service || true` when target is `hermes` or `all`.
+- **`usage()`:** add `hermes` to the `TARGET` list. No new env var overrides.
 - No version/ref prompt — `hermes update` has no equivalent of npm dist-tag or git ref in its public CLI, so we just call it.
 
 ### `README.md` updates
