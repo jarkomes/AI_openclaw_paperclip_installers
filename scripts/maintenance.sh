@@ -5,6 +5,7 @@ set -euo pipefail
 #   ./maintenance.sh                  # update everything (interactive)
 #   ./maintenance.sh openclaw         # update OpenClaw only
 #   ./maintenance.sh paperclip        # update Paperclip only
+#   ./maintenance.sh hermes           # update Hermes Agent only
 #   ./maintenance.sh all              # update everything (non-interactive if env vars set)
 #   ./maintenance.sh --help
 
@@ -25,7 +26,8 @@ Usage: $(basename "$0") [TARGET]
 TARGET:
   openclaw    Update OpenClaw only
   paperclip   Update Paperclip only
-  all         Update both OpenClaw and Paperclip
+  hermes      Update Hermes Agent only
+  all         Update OpenClaw, Paperclip, and Hermes
   (none)      Interactive — prompts for what to update (default)
 
 Environment variable overrides:
@@ -113,6 +115,25 @@ update_paperclip() {
   systemctl --user restart paperclip.service
 }
 
+update_hermes() {
+  log "Updating Hermes Agent"
+
+  if ! command -v hermes >/dev/null 2>&1; then
+    echo "Hermes not found on PATH. Install it first with ./scripts/install-apps.sh hermes"
+    exit 1
+  fi
+
+  hermes update
+
+  if systemctl --user is-active --quiet hermes-gateway.service; then
+    log "Restarting Hermes gateway user service"
+    systemctl --user daemon-reload
+    systemctl --user restart hermes-gateway.service
+  else
+    log "Hermes gateway user service is not active — skipping restart"
+  fi
+}
+
 show_status() {
   local target="${1:-all}"
   if [[ "${target}" == "openclaw" || "${target}" == "all" ]]; then
@@ -120,6 +141,9 @@ show_status() {
   fi
   if [[ "${target}" == "paperclip" || "${target}" == "all" ]]; then
     systemctl --user --no-pager --full status paperclip.service || true
+  fi
+  if [[ "${target}" == "hermes" || "${target}" == "all" ]]; then
+    systemctl --user --no-pager --full status hermes-gateway.service || true
   fi
 }
 
@@ -146,12 +170,19 @@ case "${TARGET}" in
     log "Done"
     show_status paperclip
     ;;
+  hermes)
+    brew_shellenv
+    update_hermes
+    log "Done"
+    show_status hermes
+    ;;
   all)
     brew_shellenv
     OPENCLAW_VERSION="$(prompt_with_default "OpenClaw npm version or dist-tag" "${OPENCLAW_VERSION}")"
     PAPERCLIP_REF="$(prompt_with_default "Paperclip git ref, branch, or tag" "${PAPERCLIP_REF}")"
     update_openclaw
     update_paperclip
+    update_hermes
     log "Done"
     show_status all
     ;;
@@ -162,10 +193,11 @@ case "${TARGET}" in
     echo "What would you like to update?"
     echo "  1) OpenClaw only"
     echo "  2) Paperclip only"
-    echo "  3) Both (default)"
+    echo "  3) Hermes only"
+    echo "  4) All (default)"
     echo ""
-    read -r -p "Choice [3]: " CHOICE
-    CHOICE="${CHOICE:-3}"
+    read -r -p "Choice [4]: " CHOICE
+    CHOICE="${CHOICE:-4}"
 
     case "${CHOICE}" in
       1)
@@ -181,10 +213,16 @@ case "${TARGET}" in
         show_status paperclip
         ;;
       3)
+        update_hermes
+        log "Done"
+        show_status hermes
+        ;;
+      4)
         OPENCLAW_VERSION="$(prompt_with_default "OpenClaw npm version or dist-tag" "${OPENCLAW_VERSION}")"
         PAPERCLIP_REF="$(prompt_with_default "Paperclip git ref, branch, or tag" "${PAPERCLIP_REF}")"
         update_openclaw
         update_paperclip
+        update_hermes
         log "Done"
         show_status all
         ;;

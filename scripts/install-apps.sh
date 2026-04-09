@@ -7,6 +7,7 @@ set -euo pipefail
 #   ./install-apps.sh toolchain    # Homebrew + Node + Codex + Claude Code
 #   ./install-apps.sh openclaw     # OpenClaw only     (requires toolchain)
 #   ./install-apps.sh paperclip    # Paperclip only    (requires toolchain)
+#   ./install-apps.sh hermes       # Hermes Agent only (requires toolchain)
 #   ./install-apps.sh --help
 
 OPENCLAW_INSTALL_URL="${OPENCLAW_INSTALL_URL:-https://openclaw.ai/install.sh}"
@@ -20,6 +21,7 @@ PAPERCLIP_REPO_URL="${PAPERCLIP_REPO_URL:-https://github.com/paperclipai/papercl
 PAPERCLIP_REPO_DIR="${PAPERCLIP_REPO_DIR:-$HOME/apps/paperclip}"
 OPENCLAW_ENV_FILE="${OPENCLAW_ENV_FILE:-$HOME/.openclaw/.env}"
 PAPERCLIP_ENV_FILE="${PAPERCLIP_ENV_FILE:-$HOME/.config/paperclip/paperclip.env}"
+HERMES_INSTALL_URL="${HERMES_INSTALL_URL:-https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh}"
 
 if [[ "${EUID}" -eq 0 ]]; then
   echo "Run this script as a non-root user, not root."
@@ -35,10 +37,11 @@ usage() {
 Usage: $(basename "$0") [TARGET]
 
 TARGET:
-  all          Install everything: toolchain, OpenClaw, Paperclip (default)
+  all          Install everything: toolchain, OpenClaw, Paperclip, Hermes (default)
   toolchain    Homebrew + Node + Codex CLI + Claude Code CLI
   openclaw     OpenClaw only (requires toolchain already installed)
   paperclip    Paperclip only (requires toolchain already installed)
+  hermes       Hermes Agent only (requires toolchain already installed)
   (none)       Interactive menu
 
 Environment variable overrides:
@@ -52,6 +55,7 @@ Environment variable overrides:
   OPENCLAW_INSTALL_URL      Override OpenClaw install URL
   HOMEBREW_INSTALL_URL      Override Homebrew install URL
   PAPERCLIP_REPO_URL        Override Paperclip git URL
+  HERMES_INSTALL_URL        Override Hermes installer URL
 EOF
 }
 
@@ -537,6 +541,56 @@ EOF
   echo "Paperclip CEO bootstrap: /usr/local/bin/paperclipai-local auth bootstrap-ceo"
 }
 
+install_hermes() {
+  log "Installing apt packages for Hermes Agent"
+  sudo apt-get update
+  sudo apt-get install -y \
+    git \
+    curl \
+    python3 \
+    python3-venv
+
+  log "Running upstream Hermes Agent installer"
+  curl -fsSL "${HERMES_INSTALL_URL}" | bash
+
+  if ! command -v hermes >/dev/null 2>&1; then
+    echo "Hermes was not found after installation."
+    exit 1
+  fi
+
+  local hermes_bin
+  hermes_bin="$(command -v hermes)"
+
+  log "Installing Hermes gateway user service (disabled by default)"
+  mkdir -p "$HOME/.config/systemd/user"
+  cat >"$HOME/.config/systemd/user/hermes-gateway.service" <<EOF
+[Unit]
+Description=Hermes Agent Messaging Gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Environment=PATH=$(systemd_path)
+ExecStart=${hermes_bin} gateway start
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
+EOF
+
+  systemctl --user daemon-reload
+
+  echo "Hermes Agent installed."
+  echo "Next steps:"
+  echo "  hermes                                                      # start interactive TUI"
+  echo "  hermes setup                                                # run the full setup wizard"
+  echo "  hermes gateway setup                                        # configure messaging platforms"
+  echo "  systemctl --user enable --now hermes-gateway.service        # start the messaging gateway daemon"
+  echo "  hermes claw migrate --dry-run                               # optional: preview OpenClaw import"
+  echo "  hermes doctor                                               # diagnose issues"
+}
+
 print_shell_hint() {
   echo ""
   echo "If newly installed commands are not found in this shell yet, run:"
@@ -585,6 +639,13 @@ case "${TARGET}" in
     print_shell_hint
     ;;
 
+  hermes)
+    require_toolchain
+    install_hermes
+    log "Done"
+    print_shell_hint
+    ;;
+
   all)
     # Collect all prompts upfront before any work begins.
     log "Collecting setup values"
@@ -599,6 +660,7 @@ case "${TARGET}" in
     export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"
     install_openclaw
     install_paperclip
+    install_hermes
     log "Done"
     check_dns_health "platform.claude.com" || true
     echo "Codex onboarding:  codex"
@@ -610,10 +672,11 @@ case "${TARGET}" in
     # No arg — interactive picker.
     echo ""
     echo "What would you like to install?"
-    echo "  1) Everything: toolchain + OpenClaw + Paperclip (default)"
+    echo "  1) Everything: toolchain + OpenClaw + Paperclip + Hermes (default)"
     echo "  2) Toolchain only  (Homebrew, Node, Codex, Claude Code)"
     echo "  3) OpenClaw only   (requires toolchain already installed)"
     echo "  4) Paperclip only  (requires toolchain already installed)"
+    echo "  5) Hermes only     (requires toolchain already installed)"
     echo ""
     read -r -p "Choice [1]: " CHOICE
     CHOICE="${CHOICE:-1}"
@@ -632,6 +695,7 @@ case "${TARGET}" in
         export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"
         install_openclaw
         install_paperclip
+        install_hermes
         log "Done"
         check_dns_health "platform.claude.com" || true
         echo "Codex onboarding:  codex"
@@ -662,6 +726,12 @@ case "${TARGET}" in
         PAPERCLIP_DB_NAME="$(prompt_with_default "Paperclip PostgreSQL database name" "${PAPERCLIP_DB_NAME}")"
         PAPERCLIP_DB_USER="$(prompt_with_default "Paperclip PostgreSQL role name" "${PAPERCLIP_DB_USER}")"
         install_paperclip
+        log "Done"
+        print_shell_hint
+        ;;
+      5)
+        require_toolchain
+        install_hermes
         log "Done"
         print_shell_hint
         ;;

@@ -3,8 +3,8 @@
 This repository contains an opinionated two-stage setup for a fresh Ubuntu 24 VPS:
 
 - Stage 1, as `root`: fully update the OS, apply basic SSH hardening, create `jarkomes`, install Tailscale, and lock inbound access down to Tailscale only.
-- Stage 2, as `jarkomes`: install Homebrew on Linux, install a current Node toolchain, install native Codex CLI and Claude Code CLI, install OpenClaw, install Paperclip from source, provision a dedicated local PostgreSQL database for Paperclip, and expose both apps over Tailscale.
-- Maintenance: an interactive updater can later refresh OpenClaw and Paperclip to versions or refs you choose.
+- Stage 2, as `jarkomes`: install Homebrew on Linux, install a current Node toolchain, install native Codex CLI and Claude Code CLI, install OpenClaw, install Paperclip from source, provision a dedicated local PostgreSQL database for Paperclip, install Hermes Agent via its official installer, and expose OpenClaw and Paperclip over Tailscale.
+- Maintenance: an interactive updater can later refresh OpenClaw, Paperclip, and Hermes Agent to versions or refs you choose.
 
 Assumptions:
 
@@ -67,6 +67,7 @@ TS_AUTHKEY="tskey-auth-..." ./scripts/bootstrap-root.sh
 ./scripts/install-apps.sh toolchain   # Homebrew + Node + Codex + Claude Code
 ./scripts/install-apps.sh openclaw   # OpenClaw only (requires toolchain)
 ./scripts/install-apps.sh paperclip  # Paperclip only (requires toolchain)
+./scripts/install-apps.sh hermes     # Hermes Agent only (requires toolchain)
 ```
 
 ## What You Get
@@ -86,6 +87,8 @@ TS_AUTHKEY="tskey-auth-..." ./scripts/bootstrap-root.sh
 - Paperclip built from source as a user service under `jarkomes`
 - Dedicated local PostgreSQL database for Paperclip
 - Tailnet-only URLs for both apps
+- Hermes Agent installed via the official upstream installer
+- Hermes Gateway user service installed but disabled (enable after running `hermes gateway setup`)
 
 ## OpenClaw Access
 
@@ -125,6 +128,43 @@ To print only the token value:
 awk -F= '/^OPENCLAW_GATEWAY_TOKEN=/{print substr($0, index($0,"=")+1)}' ~/.openclaw/.env
 ```
 
+## Hermes Agent
+
+Hermes Agent is installed via the official upstream installer. Unlike OpenClaw and Paperclip, Hermes has no HTTP UI — it is a terminal application plus an optional messaging gateway daemon.
+
+Start the interactive terminal UI:
+
+```bash
+hermes
+```
+
+Run the full setup wizard to choose a model provider and configure tools:
+
+```bash
+hermes setup
+```
+
+The Hermes messaging gateway user service is installed but **not enabled**. To use Telegram, Discord, Slack, WhatsApp, Signal, or Email, first configure a platform and then enable the service:
+
+```bash
+hermes gateway setup
+systemctl --user enable --now hermes-gateway.service
+systemctl --user status hermes-gateway.service
+```
+
+If you are migrating from OpenClaw, you can import your SOUL.md, memories, skills, command allowlist, platform configs, and API keys:
+
+```bash
+hermes claw migrate --dry-run   # preview
+hermes claw migrate             # perform the import
+```
+
+Diagnose issues:
+
+```bash
+hermes doctor
+```
+
 ## Maintenance
 
 To update the installed apps later:
@@ -136,7 +176,8 @@ To update the installed apps later:
 # Or target a specific app directly:
 ./scripts/maintenance.sh openclaw    # update OpenClaw only
 ./scripts/maintenance.sh paperclip  # update Paperclip only
-./scripts/maintenance.sh all        # update both without the menu
+./scripts/maintenance.sh hermes     # update Hermes Agent only
+./scripts/maintenance.sh all        # update all apps without the menu
 ```
 
 Each target prompts only for its relevant version or ref (OpenClaw npm dist-tag, default `latest`; Paperclip git ref, branch, or tag, default `master`), then updates and restarts only the affected service.
@@ -187,6 +228,8 @@ codex
 - OpenClaw repo: <https://github.com/openclaw/openclaw>
 - Paperclip repo: <https://github.com/paperclipai/paperclip>
 - Paperclip Docker docs: <https://github.com/paperclipai/paperclip/blob/master/doc/DOCKER.md>
+- Hermes Agent repo: <https://github.com/NousResearch/hermes-agent>
+- Hermes Agent docs: <https://hermes-agent.nousresearch.com/docs/>
 - Homebrew on Linux docs: <https://docs.brew.sh/Homebrew-on-Linux>
 - Homebrew install docs: <https://docs.brew.sh/Installation>
 - OpenAI Codex CLI help article: <https://help.openai.com/en/articles/11096431>
