@@ -20,6 +20,7 @@ PAPERCLIP_REPO_URL="${PAPERCLIP_REPO_URL:-https://github.com/paperclipai/papercl
 PAPERCLIP_REPO_DIR="${PAPERCLIP_REPO_DIR:-$HOME/apps/paperclip}"
 OPENCLAW_ENV_FILE="${OPENCLAW_ENV_FILE:-$HOME/.openclaw/.env}"
 PAPERCLIP_ENV_FILE="${PAPERCLIP_ENV_FILE:-$HOME/.config/paperclip/paperclip.env}"
+HERMES_INSTALL_URL="${HERMES_INSTALL_URL:-https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh}"
 
 if [[ "${EUID}" -eq 0 ]]; then
   echo "Run this script as a non-root user, not root."
@@ -535,6 +536,56 @@ EOF
   echo "Paperclip: https://${ts_dns_name}:${PAPERCLIP_SERVE_PORT}/"
   echo "Paperclip onboarding: open the Paperclip URL in your browser and complete onboarding there."
   echo "Paperclip CEO bootstrap: /usr/local/bin/paperclipai-local auth bootstrap-ceo"
+}
+
+install_hermes() {
+  log "Installing apt packages for Hermes Agent"
+  sudo apt-get update
+  sudo apt-get install -y \
+    git \
+    curl \
+    python3 \
+    python3-venv
+
+  log "Running upstream Hermes Agent installer"
+  curl -fsSL "${HERMES_INSTALL_URL}" | bash
+
+  if ! command -v hermes >/dev/null 2>&1; then
+    echo "Hermes was not found after installation."
+    exit 1
+  fi
+
+  local hermes_bin
+  hermes_bin="$(command -v hermes)"
+
+  log "Installing Hermes gateway user service (disabled by default)"
+  mkdir -p "$HOME/.config/systemd/user"
+  cat >"$HOME/.config/systemd/user/hermes-gateway.service" <<EOF
+[Unit]
+Description=Hermes Agent Messaging Gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Environment=PATH=$(systemd_path)
+ExecStart=${hermes_bin} gateway start
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
+EOF
+
+  systemctl --user daemon-reload
+
+  echo "Hermes Agent installed."
+  echo "Next steps:"
+  echo "  hermes                                                      # start interactive TUI"
+  echo "  hermes setup                                                # run the full setup wizard"
+  echo "  hermes gateway setup                                        # configure messaging platforms"
+  echo "  systemctl --user enable --now hermes-gateway.service        # start the messaging gateway daemon"
+  echo "  hermes claw migrate --dry-run                               # optional: preview OpenClaw import"
+  echo "  hermes doctor                                               # diagnose issues"
 }
 
 print_shell_hint() {
