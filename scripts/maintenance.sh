@@ -181,6 +181,7 @@ case "${TARGET}" in
     PAPERCLIP_REF="$(prompt_with_default "Paperclip git ref, branch, or tag" "${PAPERCLIP_REF}")"
     update_openclaw
     update_paperclip
+    update_hermes
     log "Done"
     show_status all
     ;;
@@ -191,10 +192,11 @@ case "${TARGET}" in
     echo "What would you like to update?"
     echo "  1) OpenClaw only"
     echo "  2) Paperclip only"
-    echo "  3) Both (default)"
+    echo "  3) Hermes only"
+    echo "  4) All (default)"
     echo ""
-    read -r -p "Choice [3]: " CHOICE
-    CHOICE="${CHOICE:-3}"
+    read -r -p "Choice [4]: " CHOICE
+    CHOICE="${CHOICE:-4}"
 
     case "${CHOICE}" in
       1)
@@ -210,10 +212,16 @@ case "${TARGET}" in
         show_status paperclip
         ;;
       3)
+        update_hermes
+        log "Done"
+        show_status hermes
+        ;;
+      4)
         OPENCLAW_VERSION="$(prompt_with_default "OpenClaw npm version or dist-tag" "${OPENCLAW_VERSION}")"
         PAPERCLIP_REF="$(prompt_with_default "Paperclip git ref, branch, or tag" "${PAPERCLIP_REF}")"
         update_openclaw
         update_paperclip
+        update_hermes
         log "Done"
         show_status all
         ;;
