@@ -5,6 +5,7 @@ set -euo pipefail
 #   ./maintenance.sh                  # update everything (interactive)
 #   ./maintenance.sh openclaw         # update OpenClaw only
 #   ./maintenance.sh paperclip        # update Paperclip only
+#   ./maintenance.sh hermes           # update Hermes Agent only
 #   ./maintenance.sh all              # update everything (non-interactive if env vars set)
 #   ./maintenance.sh --help
 

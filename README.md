@@ -3,8 +3,8 @@
 This repository contains an opinionated two-stage setup for a fresh Ubuntu 24 VPS:
 
 - Stage 1, as `root`: fully update the OS, apply basic SSH hardening, create `jarkomes`, install Tailscale, and lock inbound access down to Tailscale only.
-- Stage 2, as `jarkomes`: install Homebrew on Linux, install a current Node toolchain, install native Codex CLI and Claude Code CLI, install OpenClaw, install Paperclip from source, provision a dedicated local PostgreSQL database for Paperclip, and expose both apps over Tailscale.
-- Maintenance: an interactive updater can later refresh OpenClaw and Paperclip to versions or refs you choose.
+- Stage 2, as `jarkomes`: install Homebrew on Linux, install a current Node toolchain, install native Codex CLI and Claude Code CLI, install OpenClaw, install Paperclip from source, provision a dedicated local PostgreSQL database for Paperclip, install Hermes Agent via its official installer, and expose OpenClaw and Paperclip over Tailscale.
+- Maintenance: an interactive updater can later refresh OpenClaw, Paperclip, and Hermes Agent to versions or refs you choose.
 
 Assumptions:
 
@@ -176,7 +176,7 @@ To update the installed apps later:
 # Or target a specific app directly:
 ./scripts/maintenance.sh openclaw    # update OpenClaw only
 ./scripts/maintenance.sh paperclip  # update Paperclip only
-./scripts/maintenance.sh hermes    # update Hermes Agent only
+./scripts/maintenance.sh hermes     # update Hermes Agent only
 ./scripts/maintenance.sh all        # update all apps without the menu
 ```
 
