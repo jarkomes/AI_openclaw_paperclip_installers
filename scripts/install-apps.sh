@@ -660,6 +660,7 @@ case "${TARGET}" in
     export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"
     install_openclaw
     install_paperclip
+    install_hermes
     log "Done"
     check_dns_health "platform.claude.com" || true
     echo "Codex onboarding:  codex"
@@ -671,10 +672,11 @@ case "${TARGET}" in
     # No arg — interactive picker.
     echo ""
     echo "What would you like to install?"
-    echo "  1) Everything: toolchain + OpenClaw + Paperclip (default)"
+    echo "  1) Everything: toolchain + OpenClaw + Paperclip + Hermes (default)"
     echo "  2) Toolchain only  (Homebrew, Node, Codex, Claude Code)"
     echo "  3) OpenClaw only   (requires toolchain already installed)"
     echo "  4) Paperclip only  (requires toolchain already installed)"
+    echo "  5) Hermes only     (requires toolchain already installed)"
     echo ""
     read -r -p "Choice [1]: " CHOICE
     CHOICE="${CHOICE:-1}"
@@ -693,6 +695,7 @@ case "${TARGET}" in
         export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"
         install_openclaw
         install_paperclip
+        install_hermes
         log "Done"
         check_dns_health "platform.claude.com" || true
         echo "Codex onboarding:  codex"
@@ -723,6 +726,12 @@ case "${TARGET}" in
         PAPERCLIP_DB_NAME="$(prompt_with_default "Paperclip PostgreSQL database name" "${PAPERCLIP_DB_NAME}")"
         PAPERCLIP_DB_USER="$(prompt_with_default "Paperclip PostgreSQL role name" "${PAPERCLIP_DB_USER}")"
         install_paperclip
+        log "Done"
+        print_shell_hint
+        ;;
+      5)
+        require_toolchain
+        install_hermes
         log "Done"
         print_shell_hint
         ;;
