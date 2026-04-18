@@ -4,6 +4,7 @@ This repository contains an opinionated two-stage setup for a fresh Ubuntu 24 VP
 
 - Stage 1, as `root`: fully update the OS, apply basic SSH hardening, create `jarkomes`, install Tailscale, and lock inbound access down to Tailscale only.
 - Stage 2, as `jarkomes`: install Homebrew on Linux, install a current Node toolchain, install native Codex CLI and Claude Code CLI, install OpenClaw, install Paperclip from source, provision a dedicated local PostgreSQL database for Paperclip, install Hermes Agent via its official installer, and expose OpenClaw and Paperclip over Tailscale.
+- Stage 3 (optional), as `jarkomes`: install Nerve, the OpenClaw web UI, in cloud/Tailscale-Serve mode.
 - Maintenance: an interactive updater can later refresh OpenClaw, Paperclip, and Hermes Agent to versions or refs you choose.
 
 Assumptions:
@@ -20,6 +21,7 @@ Assumptions:
 - `scripts/bootstrap-root.sh` - run once as `root`
 - `scripts/install-apps.sh` - run as `jarkomes`
 - `scripts/maintenance.sh` - run later as `jarkomes` for app updates
+- `scripts/install-nerve.sh` - optional: install Nerve (OpenClaw web UI)
 - `scripts/install-netdata.sh` - optional add-on, see `NETDATA.md`
 
 ## Required Environment Variables
@@ -126,6 +128,41 @@ To print only the token value:
 
 ```bash
 awk -F= '/^OPENCLAW_GATEWAY_TOKEN=/{print substr($0, index($0,"=")+1)}' ~/.openclaw/.env
+```
+
+## Nerve (OpenClaw Web UI)
+
+Nerve is the browser-based cockpit for OpenClaw — chat, voice, file browser, kanban task board, session tree, agent context, and TTS all in one place.
+
+Run after Stage 2 (OpenClaw must be installed and the gateway service running):
+
+```bash
+./scripts/install-nerve.sh
+```
+
+Nerve is installed in cloud mode: bound to loopback, published over Tailscale Serve on HTTPS. Access it at:
+
+```text
+https://<tailscale-dns>:7443/
+```
+
+The default password is your OpenClaw gateway token. To retrieve it:
+
+```bash
+grep '^GATEWAY_TOKEN=' ~/nerve/.env
+```
+
+To update Nerve later:
+
+```bash
+cd ~/nerve && npm run update -- --yes
+```
+
+Service management:
+
+```bash
+systemctl --user status  nerve.service
+journalctl --user -u nerve.service -f
 ```
 
 ## Hermes Agent
