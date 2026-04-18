@@ -101,6 +101,7 @@ sudo systemctl restart netdata
 log "Publishing Netdata over Tailscale Serve on port ${NETDATA_TAILSCALE_PORT}"
 sudo tailscale serve --https="${NETDATA_TAILSCALE_PORT}" off 2>/dev/null || true
 sudo tailscale serve --https="${NETDATA_TAILSCALE_PORT}" --bg "http://127.0.0.1:${NETDATA_LISTEN_PORT}"
+sudo tailscale serve status || true
 
 log "Done"
 echo "Netdata local:    http://127.0.0.1:${NETDATA_LISTEN_PORT}"

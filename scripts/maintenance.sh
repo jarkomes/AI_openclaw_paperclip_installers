@@ -98,11 +98,13 @@ update_paperclip() {
 
   cd "${PAPERCLIP_REPO_DIR}"
   ensure_pnpm
-  pnpm install --frozen-lockfile
+  if ! pnpm install --frozen-lockfile; then
+    log "Frozen lockfile install failed — falling back to a regular install"
+    pnpm install
+  fi
   pnpm --filter @paperclipai/db generate
   pnpm build
   ./scripts/prepare-server-ui-dist.sh
-  pnpm --filter @paperclipai/server build
 
   if [[ -f "${PAPERCLIP_ENV_FILE}" ]]; then
     set -a

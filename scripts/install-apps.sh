@@ -411,6 +411,7 @@ EOF
   log "Publishing OpenClaw over Tailscale Serve on port 443"
   sudo tailscale serve --https=443 off 2>/dev/null || true
   sudo tailscale serve --https=443 --bg "http://127.0.0.1:${OPENCLAW_PORT}"
+  sudo tailscale serve status || true
 
   echo "OpenClaw:  https://${ts_dns_name}/"
   echo "OpenClaw dashboard: run 'openclaw dashboard' for the correct first-access link."
@@ -458,7 +459,6 @@ EOF
   ensure_line "${PAPERCLIP_ENV_FILE}" "PAPERCLIP_DEPLOYMENT_EXPOSURE" "private"
   ensure_line "${PAPERCLIP_ENV_FILE}" "PAPERCLIP_PUBLIC_URL" "https://${ts_dns_name}:${PAPERCLIP_SERVE_PORT}"
   ensure_line "${PAPERCLIP_ENV_FILE}" "PAPERCLIP_ALLOWED_HOSTNAMES" "${ts_dns_name},$(hostname --short)"
-  ensure_line "${PAPERCLIP_ENV_FILE}" "PATH" "$(systemd_path)"
 
   local paperclip_db_password
   paperclip_db_password="$(current_env_value "${PAPERCLIP_ENV_FILE}" "PAPERCLIP_DB_PASSWORD")"
@@ -494,11 +494,13 @@ EOF
 
   log "Installing and building Paperclip"
   cd "${PAPERCLIP_REPO_DIR}"
-  pnpm install --frozen-lockfile
+  if ! pnpm install --frozen-lockfile; then
+    log "Frozen lockfile install failed — falling back to a regular install"
+    pnpm install
+  fi
   pnpm --filter @paperclipai/db generate
   pnpm build
   ./scripts/prepare-server-ui-dist.sh
-  pnpm --filter @paperclipai/server build
 
   log "Preparing Paperclip home directories"
   mkdir -p "${HOME}/.paperclip/instances/default"
@@ -514,7 +516,7 @@ Wants=network-online.target
 EnvironmentFile=%h/.config/paperclip/paperclip.env
 WorkingDirectory=${PAPERCLIP_REPO_DIR}
 Environment=PATH=$(systemd_path)
-ExecStart=/usr/bin/env bash -lc 'node --import ./server/node_modules/tsx/dist/loader.mjs packages/db/dist/migrate.js && exec node --import ./server/node_modules/tsx/dist/loader.mjs server/dist/index.js'
+ExecStart=/usr/bin/env bash -lc 'pnpm --filter @paperclipai/db migrate && exec pnpm --filter @paperclipai/server exec tsx src/index.ts'
 Restart=always
 RestartSec=5
 
@@ -535,6 +537,7 @@ EOF
   log "Publishing Paperclip over Tailscale Serve on port ${PAPERCLIP_SERVE_PORT}"
   sudo tailscale serve --https="${PAPERCLIP_SERVE_PORT}" off 2>/dev/null || true
   sudo tailscale serve --https="${PAPERCLIP_SERVE_PORT}" --bg "http://127.0.0.1:${PAPERCLIP_APP_PORT}"
+  sudo tailscale serve status || true
 
   echo "Paperclip: https://${ts_dns_name}:${PAPERCLIP_SERVE_PORT}/"
   echo "Paperclip onboarding: open the Paperclip URL in your browser and complete onboarding there."
