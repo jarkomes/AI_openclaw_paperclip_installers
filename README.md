@@ -22,6 +22,7 @@ Assumptions:
 - `scripts/install-apps.sh` - run as `jarkomes`
 - `scripts/maintenance.sh` - run later as `jarkomes` for app updates
 - `scripts/install-nerve.sh` - optional: install Nerve (OpenClaw web UI)
+- `scripts/install-second-brain.sh` - optional: scaffold an OpenClaw-centered second-brain workspace
 - `scripts/install-netdata.sh` - optional add-on, see `NETDATA.md`
 
 ## Required Environment Variables
@@ -165,6 +166,16 @@ systemctl --user status  nerve.service
 journalctl --user -u nerve.service -f
 ```
 
+## Second Brain Workspace
+
+The repository also includes an optional workspace bootstrap around OpenClaw:
+
+```bash
+./scripts/install-second-brain.sh
+```
+
+It scaffolds a `~/brain`-style workspace, patches OpenClaw for per-channel-peer sessions, optionally wires Telegram and OpenRouter, and publishes a lightweight monitor dashboard over Tailscale Serve.
+
 ## Hermes Agent
 
 Hermes Agent is installed via the official upstream installer. Unlike OpenClaw and Paperclip, Hermes has no HTTP UI — it is a terminal application plus an optional messaging gateway daemon.
@@ -237,7 +248,7 @@ Run each once and follow its login/onboarding flow.
 If a newly installed command is not found in your current shell yet, run:
 
 ```bash
-eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"; elif [ -x "$HOME/.linuxbrew/bin/brew" ]; then eval "$("$HOME/.linuxbrew/bin/brew" shellenv)"; fi
 export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"
 ```
 

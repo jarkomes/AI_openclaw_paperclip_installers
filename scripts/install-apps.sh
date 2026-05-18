@@ -179,6 +179,10 @@ ensure_shell_path_setup() {
   ensure_contains_line "${file}" 'if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"; elif [ -x "$HOME/.linuxbrew/bin/brew" ]; then eval "$("$HOME/.linuxbrew/bin/brew" shellenv)"; fi'
 }
 
+shell_hint_command() {
+  printf '%s' 'if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"; elif [ -x "$HOME/.linuxbrew/bin/brew" ]; then eval "$("$HOME/.linuxbrew/bin/brew" shellenv)"; fi && export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"'
+}
+
 current_env_value() {
   local file="$1"
   local key="$2"
@@ -306,9 +310,6 @@ install_toolchain() {
     exit 1
   fi
 
-  ensure_contains_line "$HOME/.bashrc"  'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"'
-  ensure_contains_line "$HOME/.zshrc"   'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"'
-  ensure_contains_line "$HOME/.profile" 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"'
   ensure_shell_path_setup "$HOME/.bashrc"
   ensure_shell_path_setup "$HOME/.zshrc"
   ensure_shell_path_setup "$HOME/.profile"
@@ -597,7 +598,7 @@ EOF
 print_shell_hint() {
   echo ""
   echo "If newly installed commands are not found in this shell yet, run:"
-  echo '  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" && export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"'
+  echo "  $(shell_hint_command)"
 }
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
